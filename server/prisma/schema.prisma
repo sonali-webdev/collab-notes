@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  avatar    String?
+
+  ownedNotes     Note[]         @relation("NoteOwner")
+  collaborations Collaborator[]
+  comments       Comment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Note {
+  id      String @id @default(uuid())
+  title   String @default("Untitled")
+  content String @default("")
+  emoji   String @default("📝")
+
+  owner   User   @relation("NoteOwner", fields: [ownerId], references: [id])
+  ownerId String
+
+  collaborators Collaborator[]
+  versions      Version[]
+  comments      Comment[]
+
+  isFavorite Boolean @default(false)
+  isDeleted  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("notes")
+}
+
+model Collaborator {
+  id   String @id @default(uuid())
+  role Role   @default(VIEWER)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  noteId String
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, noteId])
+  @@map("collaborators")
+}
+
+model Version {
+  id      String @id @default(uuid())
+  content String
+
+  note     Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  noteId   String
+  editedBy String
+
+  createdAt DateTime @default(now())
+
+  @@map("versions")
+}
+
+model Comment {
+  id      String @id @default(uuid())
+  content String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  noteId String
+
+  createdAt DateTime @default(now())
+
+  @@map("comments")
+}
+
+enum Role {
+  OWNER
+  EDITOR
+  VIEWER
+}
